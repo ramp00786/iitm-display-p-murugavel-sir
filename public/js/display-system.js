@@ -56,6 +56,7 @@ class IITMDisplaySystem {
             this.initializeVideoPlayer();
             this.initializeTickers();
             this.initializeMeteorologicalCharts();
+            this.setupKeyboardControls();
             
             console.log('✅ IITM Display System initialized successfully');
         } catch (error) {
@@ -116,16 +117,28 @@ class IITMDisplaySystem {
         // Update the data array with only valid slideshows
         this.data.slideshows = validSlideshows;
         
+        // Show the slideshow overlay and start the slideshow
+        if (this.slideshowOverlay) {
+            this.slideshowOverlay.classList.remove('slideshow-hidden');
+        }
+        
         this.showSlide(0);
     }
 
     showSlide(index) {
-        if (!this.slideshowContainer || !this.data.slideshows[index]) return;
+        if (!this.slideshowContainer || !this.data.slideshows[index]) {
+            console.error('❌ Cannot show slide - missing container or slide data', {
+                hasContainer: !!this.slideshowContainer,
+                slideExists: !!this.data.slideshows[index],
+                totalSlides: this.data.slideshows?.length || 0
+            });
+            return;
+        }
 
         const slide = this.data.slideshows[index];
         this.slideshowContainer.innerHTML = '';
         
-        console.log(`📷 Showing slide ${index + 1}/${this.data.slideshows.length}: ${slide.title}`);
+        console.log(`📷 Showing slide ${index + 1}/${this.data.slideshows.length}: ${slide.title}`, slide);
 
         if (slide.type === 'image' || slide.type === 'gif') {
             const img = document.createElement('img');
@@ -158,10 +171,10 @@ class IITMDisplaySystem {
         this.currentSlideIndex++;
 
         if (this.currentSlideIndex >= this.data.slideshows.length) {
-            console.log('📷 Slideshow finished, hiding overlay');
-            if (this.slideshowOverlay) {
-                this.slideshowOverlay.classList.add('slideshow-hidden');
-            }
+            console.log('📷 Slideshow finished, restarting from beginning');
+            // Reset to first slide and continue the slideshow loop
+            this.currentSlideIndex = 0;
+            this.slideTimeout = setTimeout(() => this.showSlide(0), 3000); // 3 second pause before restart
         } else {
             this.showSlide(this.currentSlideIndex);
         }
@@ -511,8 +524,8 @@ class IITMDisplaySystem {
             };
         }
 
-        // Modern chart options
-        const commonOptions = {
+        // Modern chart options for charts with scales (line, bar, area, scatter, bubble)
+        const scaledOptions = {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -547,25 +560,117 @@ class IITMDisplaySystem {
             }
         };
 
+        // Modern chart options for charts without scales (pie, doughnut, polar, radar)
+        const nonScaledOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff',
+                        font: {
+                            size: 14,
+                            weight: '500'
+                        }
+                    }
+                }
+            }
+        };
+
         let chartConfig = {
             data: {
                 labels: data.labels || [],
                 datasets: data.datasets || []
-            },
-            options: commonOptions
+            }
         };
 
-        // Set chart type
-        if (['line', 'area'].includes(chart_type)) {
-            chartConfig.type = 'line';
-        } else if (chart_type === 'bar') {
-            chartConfig.type = 'bar';
-        } else if (['pie', 'doughnut'].includes(chart_type)) {
-            chartConfig.type = chart_type;
-            // Remove scales for pie/doughnut charts
-            delete chartConfig.options.scales;
-        } else {
-            chartConfig.type = 'bar'; // default
+        // Set chart type and appropriate options
+        switch (chart_type) {
+            case 'line':
+                chartConfig.type = 'line';
+                chartConfig.options = scaledOptions;
+                break;
+                
+            case 'area':
+                chartConfig.type = 'line';
+                chartConfig.options = scaledOptions;
+                // Ensure fill is enabled for area charts
+                if (chartConfig.data.datasets && chartConfig.data.datasets.length > 0) {
+                    chartConfig.data.datasets.forEach(dataset => {
+                        dataset.fill = true;
+                        dataset.backgroundColor = dataset.backgroundColor || 'rgba(75, 192, 192, 0.2)';
+                    });
+                }
+                break;
+                
+            case 'bar':
+                chartConfig.type = 'bar';
+                chartConfig.options = scaledOptions;
+                break;
+                
+            case 'pie':
+                chartConfig.type = 'pie';
+                chartConfig.options = nonScaledOptions;
+                break;
+                
+            case 'doughnut':
+                chartConfig.type = 'doughnut';
+                chartConfig.options = nonScaledOptions;
+                break;
+                
+            case 'radar':
+                chartConfig.type = 'radar';
+                chartConfig.options = nonScaledOptions;
+                break;
+                
+            case 'polarArea':
+                chartConfig.type = 'polarArea';
+                chartConfig.options = nonScaledOptions;
+                break;
+                
+            case 'scatter':
+                chartConfig.type = 'scatter';
+                chartConfig.options = {
+                    ...scaledOptions,
+                    scales: {
+                        ...scaledOptions.scales,
+                        x: {
+                            ...scaledOptions.scales.x,
+                            type: 'linear',
+                            position: 'bottom'
+                        },
+                        y: {
+                            ...scaledOptions.scales.y,
+                            type: 'linear'
+                        }
+                    }
+                };
+                break;
+                
+            case 'bubble':
+                chartConfig.type = 'bubble';
+                chartConfig.options = {
+                    ...scaledOptions,
+                    scales: {
+                        ...scaledOptions.scales,
+                        x: {
+                            ...scaledOptions.scales.x,
+                            type: 'linear',
+                            position: 'bottom'
+                        },
+                        y: {
+                            ...scaledOptions.scales.y,
+                            type: 'linear'
+                        }
+                    }
+                };
+                break;
+                
+            default:
+                // Default to bar chart for unknown types
+                chartConfig.type = 'bar';
+                chartConfig.options = scaledOptions;
+                console.warn(`Unknown chart type: ${chart_type}, defaulting to bar chart`);
         }
 
         return chartConfig;
@@ -632,6 +737,50 @@ class IITMDisplaySystem {
             this.initializeTickers();
             this.initializeMeteorologicalCharts();
         });
+    }
+
+    setupKeyboardControls() {
+        document.addEventListener('keydown', (event) => {
+            switch(event.key.toLowerCase()) {
+                case 's':
+                    console.log('🔍 Manual slideshow trigger (S key pressed)');
+                    this.startSlideshow();
+                    break;
+                case 'h':
+                    console.log('🔍 Hiding slideshow (H key pressed)');
+                    this.hideSlideshow();
+                    break;
+                case 'p':
+                    console.log('🔍 Pausing system (P key pressed)');
+                    this.pause();
+                    break;
+                case 'r':
+                    console.log('🔍 Resuming system (R key pressed)');
+                    this.resume();
+                    break;
+            }
+        });
+        console.log('⌨️ Keyboard controls enabled: S=Slideshow, H=Hide, P=Pause, R=Resume');
+    }
+
+    startSlideshow() {
+        if (this.data.slideshows && this.data.slideshows.length > 0) {
+            this.currentSlideIndex = 0;
+            if (this.slideshowOverlay) {
+                this.slideshowOverlay.classList.remove('slideshow-hidden');
+            }
+            this.showSlide(0);
+        } else {
+            console.log('📷 No slideshows available to display');
+        }
+    }
+
+    hideSlideshow() {
+        clearTimeout(this.slideTimeout);
+        if (this.slideshowOverlay) {
+            this.slideshowOverlay.classList.add('slideshow-hidden');
+        }
+        console.log('📷 Slideshow hidden');
     }
 }
 

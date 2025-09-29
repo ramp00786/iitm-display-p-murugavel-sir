@@ -20,13 +20,34 @@ class DisplayDataController extends Controller
         try {
             // Get slideshow items ordered by sort_order
             $slideshows = Slideshow::orderBy('sort_order')
-                ->select('id', 'title', 'url', 'type', 'mime_type', 'sort_order')
+                ->select('id', 'title', 'filename', 'path', 'type', 'mime_type', 'sort_order')
                 ->get()
                 ->map(function($item) {
+                    // Construct URL from path and filename
+                    $url = null;
+                    
+                    if ($item->path && $item->filename) {
+                        // Check if path already ends with the filename
+                        if (str_ends_with($item->path, $item->filename)) {
+                            // Path already includes filename
+                            $fullPath = $item->path;
+                        } else {
+                            // Path and filename are separate
+                            $fullPath = rtrim($item->path, '/') . '/' . $item->filename;
+                        }
+                        
+                        // Convert storage path to public URL
+                        if (str_starts_with($fullPath, 'storage/')) {
+                            $url = asset($fullPath);
+                        } else {
+                            $url = asset('storage/' . ltrim($fullPath, '/'));
+                        }
+                    }
+                    
                     return [
                         'id' => $item->id,
                         'title' => $item->title,
-                        'url' => $item->url ? asset($item->url) : null,
+                        'url' => $url,
                         'type' => $item->type,
                         'mime_type' => $item->mime_type
                     ];
@@ -34,28 +55,37 @@ class DisplayDataController extends Controller
 
             // Get videos ordered by sort_order
             $videos = Video::orderBy('sort_order')
-                ->select('id', 'title', 'url', 'mime_type', 'sort_order')
+                ->select('id', 'title', 'filename', 'path', 'mime_type', 'sort_order')
                 ->get()
                 ->map(function($video) {
-                    // Handle different URL formats
+                    // Construct URL from path and filename
                     $url = null;
-                    if ($video->url) {
-                        if (str_starts_with($video->url, 'http')) {
-                            // Full URL already
-                            $url = $video->url;
-                        } elseif (str_starts_with($video->url, '/storage/') && $video->url !== '/storage/') {
-                            // Valid relative storage URL
-                            $url = asset($video->url);
+                    
+                    if ($video->path && $video->filename) {
+                        // Check if path already ends with the filename
+                        if (str_ends_with($video->path, $video->filename)) {
+                            // Path already includes filename
+                            $fullPath = $video->path;
                         } else {
-                            // Incomplete URL or '/storage/' - try to find the actual file
-                            $videoFiles = glob(storage_path('app/public/videos/*'));
-                            foreach ($videoFiles as $file) {
-                                $filename = pathinfo($file, PATHINFO_FILENAME);
-                                // Check if the filename contains the video title
-                                if (str_contains(strtolower($filename), strtolower($video->title))) {
-                                    $url = asset('storage/videos/' . basename($file));
-                                    break;
-                                }
+                            // Path and filename are separate
+                            $fullPath = rtrim($video->path, '/') . '/' . $video->filename;
+                        }
+                        
+                        // Convert storage path to public URL
+                        if (str_starts_with($fullPath, 'storage/')) {
+                            $url = asset($fullPath);
+                        } else {
+                            $url = asset('storage/' . ltrim($fullPath, '/'));
+                        }
+                    } else {
+                        // Fallback: try to find the actual file by matching title
+                        $videoFiles = glob(storage_path('app/public/videos/*'));
+                        foreach ($videoFiles as $file) {
+                            $filename = pathinfo($file, PATHINFO_FILENAME);
+                            // Check if the filename contains the video title
+                            if (str_contains(strtolower($filename), strtolower($video->title))) {
+                                $url = asset('storage/videos/' . basename($file));
+                                break;
                             }
                         }
                     }
@@ -79,13 +109,13 @@ class DisplayDataController extends Controller
             $newsItems = $newsCategory 
                 ? $newsCategory->news()
                     ->orderBy('sort_order')
-                    ->select('id', 'title', 'content')
+                    ->select('id', 'title')
                     ->get()
                     ->map(function($news) {
                         return [
                             'id' => $news->id,
                             'title' => $news->title,
-                            'content' => $news->content
+                            'content' => $news->title // Use title as content since there's no separate content field
                         ];
                     })
                 : collect();
@@ -93,13 +123,13 @@ class DisplayDataController extends Controller
             $temperatureItems = $temperatureCategory 
                 ? $temperatureCategory->news()
                     ->orderBy('sort_order')
-                    ->select('id', 'title', 'content')
+                    ->select('id', 'title')
                     ->get()
                     ->map(function($temp) {
                         return [
                             'id' => $temp->id,
                             'title' => $temp->title,
-                            'content' => $temp->content
+                            'content' => $temp->title // Use title as content since there's no separate content field
                         ];
                     })
                 : collect();
@@ -157,13 +187,34 @@ class DisplayDataController extends Controller
     {
         try {
             $slideshows = Slideshow::orderBy('sort_order')
-                ->select('id', 'title', 'url', 'type', 'mime_type')
+                ->select('id', 'title', 'filename', 'path', 'type', 'mime_type')
                 ->get()
                 ->map(function($item) {
+                    // Construct URL from path and filename
+                    $url = null;
+                    
+                    if ($item->path && $item->filename) {
+                        // Check if path already ends with the filename
+                        if (str_ends_with($item->path, $item->filename)) {
+                            // Path already includes filename
+                            $fullPath = $item->path;
+                        } else {
+                            // Path and filename are separate
+                            $fullPath = rtrim($item->path, '/') . '/' . $item->filename;
+                        }
+                        
+                        // Convert storage path to public URL
+                        if (str_starts_with($fullPath, 'storage/')) {
+                            $url = asset($fullPath);
+                        } else {
+                            $url = asset('storage/' . ltrim($fullPath, '/'));
+                        }
+                    }
+                    
                     return [
                         'id' => $item->id,
                         'title' => $item->title,
-                        'url' => $item->url ? asset($item->url) : null,
+                        'url' => $url,
                         'type' => $item->type,
                         'mime_type' => $item->mime_type
                     ];
@@ -189,28 +240,37 @@ class DisplayDataController extends Controller
     {
         try {
             $videos = Video::orderBy('sort_order')
-                ->select('id', 'title', 'url', 'mime_type')
+                ->select('id', 'title', 'filename', 'path', 'mime_type')
                 ->get()
                 ->map(function($video) {
-                    // Handle different URL formats
+                    // Construct URL from path and filename
                     $url = null;
-                    if ($video->url) {
-                        if (str_starts_with($video->url, 'http')) {
-                            // Full URL already
-                            $url = $video->url;
-                        } elseif (str_starts_with($video->url, '/storage/') && $video->url !== '/storage/') {
-                            // Valid relative storage URL
-                            $url = asset($video->url);
+                    
+                    if ($video->path && $video->filename) {
+                        // Check if path already ends with the filename
+                        if (str_ends_with($video->path, $video->filename)) {
+                            // Path already includes filename
+                            $fullPath = $video->path;
                         } else {
-                            // Incomplete URL or '/storage/' - try to find the actual file
-                            $videoFiles = glob(storage_path('app/public/videos/*'));
-                            foreach ($videoFiles as $file) {
-                                $filename = pathinfo($file, PATHINFO_FILENAME);
-                                // Check if the filename contains the video title
-                                if (str_contains(strtolower($filename), strtolower($video->title))) {
-                                    $url = asset('storage/videos/' . basename($file));
-                                    break;
-                                }
+                            // Path and filename are separate
+                            $fullPath = rtrim($video->path, '/') . '/' . $video->filename;
+                        }
+                        
+                        // Convert storage path to public URL
+                        if (str_starts_with($fullPath, 'storage/')) {
+                            $url = asset($fullPath);
+                        } else {
+                            $url = asset('storage/' . ltrim($fullPath, '/'));
+                        }
+                    } else {
+                        // Fallback: try to find the actual file by matching title
+                        $videoFiles = glob(storage_path('app/public/videos/*'));
+                        foreach ($videoFiles as $file) {
+                            $filename = pathinfo($file, PATHINFO_FILENAME);
+                            // Check if the filename contains the video title
+                            if (str_contains(strtolower($filename), strtolower($video->title))) {
+                                $url = asset('storage/videos/' . basename($file));
+                                break;
                             }
                         }
                     }
