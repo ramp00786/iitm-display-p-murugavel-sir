@@ -95,15 +95,27 @@ class IITMDisplaySystem {
     }
 
     initializeSlideshow() {
-        if (!this.data.slideshows || this.data.slideshows.length === 0) {
-            console.log('📷 No slideshows available');
+        // Filter out slideshows with invalid URLs
+        const validSlideshows = this.data.slideshows?.filter(slideshow => 
+            slideshow.url && 
+            slideshow.url !== '/storage/' && 
+            slideshow.url !== 'null' && 
+            slideshow.url.trim() !== ''
+        ) || [];
+        
+        if (validSlideshows.length === 0) {
+            console.log('📷 No valid slideshows available');
             if (this.slideshowOverlay) {
                 this.slideshowOverlay.classList.add('slideshow-hidden');
             }
             return;
         }
 
-        console.log(`📷 Initializing slideshow with ${this.data.slideshows.length} items`);
+        console.log(`📷 Initializing slideshow with ${validSlideshows.length} valid items`);
+        
+        // Update the data array with only valid slideshows
+        this.data.slideshows = validSlideshows;
+        
         this.showSlide(0);
     }
 
@@ -158,15 +170,26 @@ class IITMDisplaySystem {
     initializeVideoPlayer() {
         const noVideoContent = document.getElementById('noVideoContent');
         
-        if (!this.data.videos || this.data.videos.length === 0) {
-            console.log('🎥 No videos available');
+        // Filter out videos with invalid URLs
+        const validVideos = this.data.videos?.filter(video => 
+            video.url && 
+            video.url !== '/storage/' && 
+            video.url !== 'null' && 
+            video.url.trim() !== ''
+        ) || [];
+        
+        if (validVideos.length === 0) {
+            console.log('🎥 No valid videos available');
             if (noVideoContent) {
                 noVideoContent.textContent = 'No videos available';
             }
             return;
         }
 
-        console.log(`🎥 Initializing video player with ${this.data.videos.length} videos`);
+        console.log(`🎥 Initializing video player with ${validVideos.length} valid videos`);
+        
+        // Update the data array with only valid videos
+        this.data.videos = validVideos;
         
         // Hide no content message and show video player
         if (noVideoContent) {
@@ -177,13 +200,40 @@ class IITMDisplaySystem {
             this.videoPlayer.style.display = 'block';
             
             // Set first video
-            const firstVideo = this.data.videos[0];
+            const firstVideo = validVideos[0];
             this.videoPlayer.src = firstVideo.url;
             
+            console.log(`🎥 Loading first video: ${firstVideo.title} - ${firstVideo.url}`);
+            
             // Setup video rotation for multiple videos
-            if (this.data.videos.length > 1) {
+            if (validVideos.length > 1) {
                 this.videoPlayer.addEventListener('ended', () => this.loadNextVideo());
             }
+            
+            // Handle video load errors
+            this.videoPlayer.addEventListener('error', (e) => {
+                const currentVideo = this.data.videos[this.currentVideoIndex];
+                console.error(`❌ Video load error for: ${currentVideo?.title} - ${currentVideo?.url}`, e);
+                
+                // Try next video if available
+                if (this.data.videos.length > 1) {
+                    console.log('🔄 Trying next video due to error...');
+                    setTimeout(() => this.loadNextVideo(), 2000);
+                } else {
+                    console.log('🚫 No other videos available');
+                    if (noVideoContent) {
+                        noVideoContent.style.display = 'block';
+                        noVideoContent.textContent = 'Video playback error';
+                    }
+                    this.videoPlayer.style.display = 'none';
+                }
+            });
+            
+            // Handle successful video load
+            this.videoPlayer.addEventListener('loadeddata', () => {
+                const currentVideo = this.data.videos[this.currentVideoIndex];
+                console.log(`✅ Video loaded successfully: ${currentVideo?.title}`);
+            });
         }
     }
 
@@ -193,7 +243,17 @@ class IITMDisplaySystem {
         this.currentVideoIndex = (this.currentVideoIndex + 1) % this.data.videos.length;
         const video = this.data.videos[this.currentVideoIndex];
         
-        console.log(`🎥 Loading next video: ${video.title}`);
+        console.log(`🎥 Loading next video: ${video.title} - ${video.url}`);
+        
+        if (!video.url || video.url === 'null') {
+            console.error(`❌ Invalid URL for video: ${video.title}`);
+            // Try next video if available
+            if (this.data.videos.length > 1) {
+                setTimeout(() => this.loadNextVideo(), 1000);
+            }
+            return;
+        }
+        
         this.videoPlayer.src = video.url;
         this.videoPlayer.load();
     }

@@ -26,7 +26,7 @@ class DisplayDataController extends Controller
                     return [
                         'id' => $item->id,
                         'title' => $item->title,
-                        'url' => $item->url,
+                        'url' => $item->url ? asset($item->url) : null,
                         'type' => $item->type,
                         'mime_type' => $item->mime_type
                     ];
@@ -37,12 +37,39 @@ class DisplayDataController extends Controller
                 ->select('id', 'title', 'url', 'mime_type', 'sort_order')
                 ->get()
                 ->map(function($video) {
+                    // Handle different URL formats
+                    $url = null;
+                    if ($video->url) {
+                        if (str_starts_with($video->url, 'http')) {
+                            // Full URL already
+                            $url = $video->url;
+                        } elseif (str_starts_with($video->url, '/storage/') && $video->url !== '/storage/') {
+                            // Valid relative storage URL
+                            $url = asset($video->url);
+                        } else {
+                            // Incomplete URL or '/storage/' - try to find the actual file
+                            $videoFiles = glob(storage_path('app/public/videos/*'));
+                            foreach ($videoFiles as $file) {
+                                $filename = pathinfo($file, PATHINFO_FILENAME);
+                                // Check if the filename contains the video title
+                                if (str_contains(strtolower($filename), strtolower($video->title))) {
+                                    $url = asset('storage/videos/' . basename($file));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
                     return [
                         'id' => $video->id,
                         'title' => $video->title,
-                        'url' => $video->url,
+                        'url' => $url,
                         'mime_type' => $video->mime_type
                     ];
+                })
+                ->filter(function($video) {
+                    // Only include videos with valid URLs
+                    return $video['url'] !== null;
                 });
 
             // Get news by category for tickers
@@ -131,7 +158,16 @@ class DisplayDataController extends Controller
         try {
             $slideshows = Slideshow::orderBy('sort_order')
                 ->select('id', 'title', 'url', 'type', 'mime_type')
-                ->get();
+                ->get()
+                ->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'title' => $item->title,
+                        'url' => $item->url ? asset($item->url) : null,
+                        'type' => $item->type,
+                        'mime_type' => $item->mime_type
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
@@ -154,7 +190,42 @@ class DisplayDataController extends Controller
         try {
             $videos = Video::orderBy('sort_order')
                 ->select('id', 'title', 'url', 'mime_type')
-                ->get();
+                ->get()
+                ->map(function($video) {
+                    // Handle different URL formats
+                    $url = null;
+                    if ($video->url) {
+                        if (str_starts_with($video->url, 'http')) {
+                            // Full URL already
+                            $url = $video->url;
+                        } elseif (str_starts_with($video->url, '/storage/') && $video->url !== '/storage/') {
+                            // Valid relative storage URL
+                            $url = asset($video->url);
+                        } else {
+                            // Incomplete URL or '/storage/' - try to find the actual file
+                            $videoFiles = glob(storage_path('app/public/videos/*'));
+                            foreach ($videoFiles as $file) {
+                                $filename = pathinfo($file, PATHINFO_FILENAME);
+                                // Check if the filename contains the video title
+                                if (str_contains(strtolower($filename), strtolower($video->title))) {
+                                    $url = asset('storage/videos/' . basename($file));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    return [
+                        'id' => $video->id,
+                        'title' => $video->title,
+                        'url' => $url,
+                        'mime_type' => $video->mime_type
+                    ];
+                })
+                ->filter(function($video) {
+                    // Only include videos with valid URLs
+                    return $video['url'] !== null;
+                });
 
             return response()->json([
                 'success' => true,

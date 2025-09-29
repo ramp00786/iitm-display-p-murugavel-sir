@@ -21,6 +21,9 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::get('/slideshows', [DisplayDataController::class, 'slideshows'])->name('slideshows');
     Route::get('/videos', [DisplayDataController::class, 'videos'])->name('videos');
     Route::get('/meteorological', [DisplayDataController::class, 'meteorological'])->name('meteorological');
+    
+    // Debug endpoints
+    Route::get('/debug/videos', [App\Http\Controllers\Api\DebugController::class, 'videos'])->name('debug.videos');
 });
 
 // Authentication routes
