@@ -174,8 +174,8 @@
     justify-content: center;
   }
   .slideshow-overlay img, .slideshow-overlay video {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100wh;
+    height: 100vh;
     object-fit: contain;
   }
   .slideshow-hidden { display: none; }
@@ -296,6 +296,7 @@ const slideshows = @json($slideshows->map(function($item) {
 let currentSlideIndex = 0;
 const slideshowContainer = document.getElementById('slideshowContainer');
 const slideshowOverlay = document.getElementById('slideshowOverlay');
+let slideTimeout;
 
 function showSlide(index) {
   const slide = slideshows[index];
@@ -306,31 +307,43 @@ function showSlide(index) {
     img.src = slide.url;
     img.onload = () => {
       slideshowContainer.appendChild(img);
+      // Show image/GIF for 5 seconds
+      slideTimeout = setTimeout(nextSlide, 5000);
     };
   } else if (slide.type === 'video') {
     const video = document.createElement('video');
     video.src = slide.url;
     video.autoplay = true;
     video.muted = true;
-    video.loop = true;
+    video.loop = false; // Don't loop individual videos
+    video.onended = nextSlide; // Move to next slide when video ends
+    video.onerror = () => {
+      // If video fails to load, wait 5 seconds and move to next
+      slideTimeout = setTimeout(nextSlide, 5000);
+    };
     slideshowContainer.appendChild(video);
   }
 }
 
 function nextSlide() {
-  currentSlideIndex = (currentSlideIndex + 1) % slideshows.length;
-  showSlide(currentSlideIndex);
+  clearTimeout(slideTimeout); // Clear any existing timeout
+  currentSlideIndex++;
+  
+  if (currentSlideIndex >= slideshows.length) {
+    // All slides finished, hide slideshow and show main content
+    slideshowOverlay.classList.add('slideshow-hidden');
+  } else {
+    // Show next slide
+    showSlide(currentSlideIndex);
+  }
 }
 
 function startSlideshow() {
   if (slideshows.length > 0) {
     showSlide(0);
-    setInterval(nextSlide, 5000); // Change slide every 5 seconds
-    
-    // Hide slideshow after 30 seconds to show main content
-    setTimeout(() => {
-      slideshowOverlay.classList.add('slideshow-hidden');
-    }, 30000);
+  } else {
+    // No slides, show main content immediately
+    slideshowOverlay.classList.add('slideshow-hidden');
   }
 }
 
