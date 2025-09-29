@@ -104,6 +104,13 @@
                             </a>
                         </li>
                         
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.meteorological.*') ? 'active' : '' }}" href="{{ route('admin.meteorological.index') }}">
+                                <i class="fas fa-cloud-sun me-2"></i>
+                                Meteorological Data
+                            </a>
+                        </li>
+                        
                         <hr class="text-muted">
                         
                         <li class="nav-item">
@@ -134,7 +141,7 @@
             </nav>
 
             <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <main class="col-md-9 ms-sm-auto col-lg-10 main-content">
                 <!-- Top Navigation -->
                 <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
                     <div class="container-fluid">
