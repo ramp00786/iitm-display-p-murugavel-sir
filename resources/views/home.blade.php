@@ -81,7 +81,7 @@
         }
 
         .card1::after {
-            content: "LIVE DISPLAY MODE";
+            content: "";
             position: absolute;
             bottom: 10px;
             right: 30px;
@@ -108,7 +108,7 @@
         .iitm-logo, .esso-logo, .moes-logo {
             height: 60px;
             object-fit: contain;
-            filter: brightness(0) invert(1);
+            /* filter: brightness(0) invert(1); */
             opacity: 0.9;
         }
 
@@ -458,12 +458,12 @@
         <div class="card1">
             <div class="card-content">
                 <div class="left-images">
-                    <img src="{{ asset('images/iitm_logo-preview.png') }}" alt="IITM Logo" class="iitm-logo">
+                    <img src="{{ asset('images/iitm-logo-no-bg.png') }}" alt="IITM Logo" class="iitm-logo">
                     <img src="{{ asset('images/esso-preview.png') }}" alt="Esso Logo" class="esso-logo">
                 </div>
                 <h2>Indian Institute of Tropical Meteorology, Pune<br> Integrated Instrument Display System</h2>
                 <div class="right-image">
-                    <img src="{{ asset('images/moes_goi-preview.png') }}" alt="MoES Logo" class="moes-logo">
+                    <img src="{{ asset('images/moes.png') }}" alt="MoES Logo" class="moes-logo">
                 </div>
             </div>
         </div>
