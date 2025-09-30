@@ -117,6 +117,59 @@
                         </div>
                     </div>
                     @else
+                    <!-- Special handling for bubble and scatter charts -->
+                    @if(in_array($chart->chart_type, ['bubble', 'scatter']))
+                        <div class="form-group">
+                            <label for="data_input" class="font-weight-bold">
+                                @if($chart->chart_type == 'bubble')
+                                    Bubble Chart Data (X, Y, Radius)
+                                @else
+                                    Scatter Chart Data (X, Y)
+                                @endif
+                            </label>
+                            @php
+                                $existingDataString = '';
+                                if ($existingData && isset($existingData['datasets'][0]['data'])) {
+                                    $dataPoints = [];
+                                    foreach ($existingData['datasets'][0]['data'] as $point) {
+                                        if ($chart->chart_type == 'bubble') {
+                                            $dataPoints[] = $point['x'] . ',' . $point['y'] . ',' . $point['r'];
+                                        } else {
+                                            $dataPoints[] = $point['x'] . ',' . $point['y'];
+                                        }
+                                    }
+                                    $existingDataString = implode(';', $dataPoints);
+                                }
+                                $defaultData = $chart->chart_type == 'bubble' ? '20,30,15;40,10,10;60,20,8' : '10,20;30,40;50,10';
+                            @endphp
+                            <input type="text" name="data_input" id="data_input" class="form-control" 
+                                   value="{{ $existingDataString ?: $defaultData }}" 
+                                   placeholder="{{ $chart->chart_type == 'bubble' ? 'x1,y1,r1;x2,y2,r2;x3,y3,r3' : 'x1,y1;x2,y2;x3,y3' }}" required>
+                            <small class="form-text text-muted">
+                                @if($chart->chart_type == 'bubble')
+                                    Enter bubble data as: x,y,radius separated by semicolons. Example: 20,30,15;40,10,10;60,20,8
+                                @else
+                                    Enter scatter data as: x,y separated by semicolons. Example: 10,20;30,40;50,10
+                                @endif
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dataset_label" class="font-weight-bold">Dataset Label</label>
+                            <input type="text" name="dataset_label" id="dataset_label" class="form-control" 
+                                   value="{{ $existingData && isset($existingData['datasets'][0]['label']) ? $existingData['datasets'][0]['label'] : ($chart->chart_type == 'bubble' ? 'Bubble Dataset' : 'Scatter Dataset') }}" 
+                                   placeholder="Enter dataset label">
+                            <small class="form-text text-muted">Label for the data series</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="colors_input" class="font-weight-bold">Color</label>
+                            <input type="color" name="colors_input" id="colors_input" class="form-control" 
+                                   value="{{ $existingData && isset($existingData['datasets'][0]['backgroundColor']) ? $existingData['datasets'][0]['backgroundColor'] : '#36a2eb' }}" 
+                                   style="height: 38px;">
+                            <small class="form-text text-muted">Color for the data points</small>
+                        </div>
+                    @else
                     <!-- Single dataset for pie, doughnut, etc. -->
                     <div class="form-group">
                         <label for="data_input" class="font-weight-bold">Chart Data</label>
@@ -133,6 +186,7 @@
                                placeholder="Enter dataset label">
                         <small class="form-text text-muted">Label for the data series</small>
                     </div>
+                    @endif
                     @endif
 
                     @if(in_array($chart->chart_type, ['pie', 'doughnut', 'polarArea']))
@@ -356,6 +410,33 @@ function collectFormData(chartType) {
             
             datasets.push(dataset);
         });
+    } else if (['scatter', 'bubble'].includes(chartType)) {
+        // Handle scatter and bubble charts
+        const dataInput = $('#data_input').val();
+        const datasetLabel = $('#dataset_label').val() || (chartType === 'bubble' ? 'Bubble Dataset' : 'Scatter Dataset');
+        const color = $('#colors_input').val() || '#36a2eb';
+        
+        let data = [];
+        if (dataInput) {
+            const points = dataInput.split(';').map(point => point.trim()).filter(point => point);
+            points.forEach(point => {
+                const coords = point.split(',').map(coord => parseFloat(coord.trim()));
+                if (chartType === 'bubble' && coords.length >= 3) {
+                    data.push({x: coords[0], y: coords[1], r: coords[2]});
+                } else if (chartType === 'scatter' && coords.length >= 2) {
+                    data.push({x: coords[0], y: coords[1]});
+                }
+            });
+        }
+
+        let dataset = {
+            label: datasetLabel,
+            data: data,
+            backgroundColor: color,
+            borderColor: color
+        };
+        
+        datasets.push(dataset);
     } else {
         // Single dataset for pie, doughnut, etc.
         const dataInput = $('#data_input').val();
@@ -440,6 +521,23 @@ function generateSampleData() {
             const sampleData = Array.from({length: 6}, () => Math.floor(Math.random() * 100) + 1);
             $(this).find('.dataset-data').val(sampleData.join(', '));
         });
+    } else if (chartType === 'bubble') {
+        // Generate sample bubble data (x,y,r format)
+        const sampleData = Array.from({length: 5}, () => {
+            const x = Math.floor(Math.random() * 100) + 1;
+            const y = Math.floor(Math.random() * 100) + 1;
+            const r = Math.floor(Math.random() * 20) + 5;
+            return `${x},${y},${r}`;
+        });
+        $('#data_input').val(sampleData.join(';'));
+    } else if (chartType === 'scatter') {
+        // Generate sample scatter data (x,y format)
+        const sampleData = Array.from({length: 6}, () => {
+            const x = Math.floor(Math.random() * 100) + 1;
+            const y = Math.floor(Math.random() * 100) + 1;
+            return `${x},${y}`;
+        });
+        $('#data_input').val(sampleData.join(';'));
     } else {
         // Generate sample data for single dataset
         const sampleData = Array.from({length: 6}, () => Math.floor(Math.random() * 100) + 1);

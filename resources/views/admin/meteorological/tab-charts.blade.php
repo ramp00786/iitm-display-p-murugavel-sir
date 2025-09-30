@@ -162,32 +162,47 @@ $(document).ready(function() {
                 if (canvasElement{{ $chart->id }}) {
                     const ctx{{ $chart->id }} = canvasElement{{ $chart->id }}.getContext('2d');
                     
+                    // Configure chart options based on chart type
+                    let chartOptions = {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                enabled: true
+                            }
+                        }
+                    };
+
+                    // Add appropriate scales based on chart type
+                    @if(in_array($chart->chart_type, ['scatter', 'bubble']))
+                    chartOptions.scales = {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom'
+                        },
+                        y: {
+                            type: 'linear'
+                        }
+                    };
+                    @elseif(!in_array($chart->chart_type, ['pie', 'doughnut', 'polar', 'radar']))
+                    chartOptions.scales = {
+                        y: {
+                            beginAtZero: true
+                        },
+                        x: {
+                            display: true
+                        }
+                    };
+                    @endif
+
                     new Chart(ctx{{ $chart->id }}, {
                         type: '{{ $chart->chart_type }}',
                         data: chartData{{ $chart->id }},
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                @if(!in_array($chart->chart_type, ['pie', 'doughnut', 'polar', 'radar']))
-                                y: {
-                                    beginAtZero: true
-                                },
-                                x: {
-                                    display: true
-                                }
-                                @endif
-                            },
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'bottom'
-                                },
-                                tooltip: {
-                                    enabled: true
-                                }
-                            }
-                        }
+                        options: chartOptions
                     });
                 }
             } catch (error) {

@@ -100,7 +100,7 @@
                         
                         <div class="text-center">
                             <small class="text-muted">
-                                Default credentials: admin@iitm-display.com / admin@123
+                               Use your IITM credentials to log in.
                             </small>
                         </div>
                     </div>
