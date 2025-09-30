@@ -234,6 +234,39 @@ class MeteorologicalController extends Controller
 
                 $datasets[] = $dataset;
             }
+        } elseif (in_array($chartType, ['scatter', 'bubble'])) {
+            // Handle scatter and bubble charts (special x,y,r format)
+            $dataInput = trim($request->data_input);
+            $data = [];
+            
+            if ($chartType === 'bubble') {
+                // Parse bubble data in format: "x1,y1,r1;x2,y2,r2;x3,y3,r3"
+                $points = array_filter(array_map('trim', explode(';', $dataInput)));
+                foreach ($points as $point) {
+                    $coords = array_map('floatval', array_map('trim', explode(',', $point)));
+                    if (count($coords) >= 3) {
+                        $data[] = ['x' => $coords[0], 'y' => $coords[1], 'r' => $coords[2]];
+                    }
+                }
+            } else {
+                // Parse scatter data in format: "x1,y1;x2,y2;x3,y3"
+                $points = array_filter(array_map('trim', explode(';', $dataInput)));
+                foreach ($points as $point) {
+                    $coords = array_map('floatval', array_map('trim', explode(',', $point)));
+                    if (count($coords) >= 2) {
+                        $data[] = ['x' => $coords[0], 'y' => $coords[1]];
+                    }
+                }
+            }
+            
+            $dataset = [
+                'label' => $request->dataset_label,
+                'data' => $data,
+                'backgroundColor' => $request->colors_input ? trim($request->colors_input) : '#36a2eb',
+                'borderColor' => $request->colors_input ? trim($request->colors_input) : '#36a2eb',
+            ];
+
+            $datasets[] = $dataset;
         } else {
             // Handle single dataset for pie, doughnut, etc.
             $data = array_map('floatval', array_map('trim', explode(',', $request->data_input)));

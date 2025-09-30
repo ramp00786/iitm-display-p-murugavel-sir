@@ -225,7 +225,7 @@ $(document).ready(function() {
 // Function to delete chart
 function deleteChart(chartId, chartCard) {
     $.ajax({
-        url: `/admin/meteorological/chart/${chartId}`,
+        url: `{{ url('admin/meteorological/chart') }}/${chartId}`,
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')

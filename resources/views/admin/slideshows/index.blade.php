@@ -567,7 +567,7 @@ $(document).ready(function() {
         
         // Set delete form action
         const deleteForm = document.getElementById('deleteForm');
-        deleteForm.action = `/admin/slideshows/${slideshowId}`;
+        deleteForm.action = `{{ url('admin/slideshows') }}/${slideshowId}`;
         
         // Find the slideshow row to get preview
         const slideshowRow = $(`.slideshow-row[data-id="${slideshowId}"]`);

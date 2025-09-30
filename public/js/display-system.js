@@ -107,7 +107,12 @@ class IITMDisplaySystem {
         console.log('📡 Fetching display data from API...');
         
         try {
-            const response = await fetch('/api/display-data');
+            // Get the base URL from the current page location
+            const baseUrl = this.getBaseUrl();
+            const apiUrl = `${baseUrl}/api/display-data`;
+            
+            console.log('📡 API URL:', apiUrl);
+            const response = await fetch(apiUrl);
             const result = await response.json();
             
             if (!result.success) {
@@ -121,6 +126,47 @@ class IITMDisplaySystem {
             console.error('❌ Error fetching data:', error);
             throw error;
         }
+    }
+
+    /**
+     * Get the correct base URL for both local and server environments
+     */
+    getBaseUrl() {
+        // Check if there's a meta tag with app-url
+        const appUrlMeta = document.querySelector('meta[name="app-url"]');
+        if (appUrlMeta) {
+            return appUrlMeta.getAttribute('content');
+        }
+        
+        // Check if there's a base element in the head
+        const baseElement = document.querySelector('base[href]');
+        if (baseElement) {
+            return baseElement.getAttribute('href').replace(/\/$/, '');
+        }
+        
+        // Fallback: construct from current location
+        const path = window.location.pathname;
+        const origin = window.location.origin;
+        
+        // If path includes /public/, use everything up to and including /public
+        if (path.includes('/public/')) {
+            const publicIndex = path.indexOf('/public/');
+            return origin + path.substring(0, publicIndex + 7);
+        }
+        
+        // If path includes /iitm-display/, use everything up to and including that
+        if (path.includes('/iitm-display/')) {
+            const iitmIndex = path.indexOf('/iitm-display/');
+            return origin + path.substring(0, iitmIndex + 13) + 'public';
+        }
+        
+        // For local development (php artisan serve) - check for port 8000
+        if (window.location.port === '8000' || origin.includes('127.0.0.1') || origin.includes('localhost')) {
+            return origin;
+        }
+        
+        // Default fallback
+        return origin;
     }
 
     initializeSlideshow() {

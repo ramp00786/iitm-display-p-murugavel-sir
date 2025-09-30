@@ -37,6 +37,12 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
+    // Debug URL generation (remove after fixing issues)
+    Route::get('/debug-urls', function () {
+        $slideshows = \App\Models\Slideshow::take(5)->get();
+        return view('admin.debug-urls', compact('slideshows'));
+    })->name('debug.urls');
+    
     // Profile management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

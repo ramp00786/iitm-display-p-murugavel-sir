@@ -25,7 +25,24 @@ class Video extends Model
      */
     public function getUrlAttribute(): string
     {
-        return Storage::url($this->path);
+        if (!$this->path || !$this->filename) {
+            return '';
+        }
+        
+        // Construct the full path
+        $fullPath = $this->path;
+        if (!str_ends_with($this->path, $this->filename)) {
+            $fullPath = rtrim($this->path, '/') . '/' . $this->filename;
+        }
+        
+        // For subdirectory deployments, use asset() with proper path construction
+        if (str_starts_with($fullPath, 'storage/')) {
+            return asset($fullPath);
+        } elseif (str_starts_with($fullPath, 'videos/')) {
+            return asset('storage/' . $fullPath);
+        } else {
+            return asset('storage/' . ltrim($fullPath, '/'));
+        }
     }
 
     /**

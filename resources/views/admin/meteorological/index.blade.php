@@ -231,7 +231,7 @@ function showDeleteConfirmModal(tabId, tabHeading) {
 
 function updateTab(tabId, formData) {
     $.ajax({
-        url: `/admin/meteorological/tab/${tabId}/update`,
+        url: `{{ url('admin/meteorological/tab') }}/${tabId}/update`,
         method: 'PUT',
         data: formData,
         headers: {
@@ -258,7 +258,7 @@ function updateTab(tabId, formData) {
 
 function deleteTabWithPassword(tabId, password) {
     $.ajax({
-        url: `/admin/meteorological/tab/${tabId}/delete-with-password`,
+        url: `{{ url('admin/meteorological/tab') }}/${tabId}/delete-with-password`,
         method: 'POST',
         data: {
             admin_password: password

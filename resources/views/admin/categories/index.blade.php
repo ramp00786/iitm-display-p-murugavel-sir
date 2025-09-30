@@ -243,7 +243,7 @@ $(document).ready(function() {
         
         // Set delete form action
         const deleteForm = document.getElementById('deleteForm');
-        deleteForm.action = `/admin/categories/${categoryId}`;
+        deleteForm.action = `{{ url('admin/categories') }}/${categoryId}`;
         
         // Reset password field and button state
         $('#deletePassword').val('');

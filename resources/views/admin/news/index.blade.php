@@ -272,7 +272,7 @@ $(document).ready(function() {
         
         // Set delete form action
         const deleteForm = document.getElementById('deleteForm');
-        deleteForm.action = `/admin/news/${newsId}`;
+        deleteForm.action = `{{ url('admin/news') }}/${newsId}`;
         
         // Reset password field and button state
         $('#deletePassword').val('');
