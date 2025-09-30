@@ -121,6 +121,13 @@
                         </li>
                         
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.help.*') ? 'active' : '' }}" href="{{ route('admin.help.index') }}">
+                                <i class="fas fa-question-circle me-2"></i>
+                                Help & Guide
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ route('home') }}" target="_blank">
                                 <i class="fas fa-external-link-alt me-2"></i>
                                 View Display

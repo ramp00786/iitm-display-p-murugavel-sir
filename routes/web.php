@@ -68,6 +68,17 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::put('/tab/{tab}/update', [MeteorologicalController::class, 'updateTab'])->name('update.tab');
     });
     
+    // Help & Documentation routes
+    Route::prefix('help')->name('help.')->group(function () {
+        Route::get('/', function () { return view('admin.help.index'); })->name('index');
+        Route::get('/categories', function () { return view('admin.help.categories'); })->name('categories');
+        Route::get('/news', function () { return view('admin.help.news'); })->name('news');
+        Route::get('/videos', function () { return view('admin.help.videos'); })->name('videos');
+        Route::get('/slideshows', function () { return view('admin.help.slideshows'); })->name('slideshows');
+        Route::get('/meteorological', function () { return view('admin.help.meteorological'); })->name('meteorological');
+        Route::get('/profile', function () { return view('admin.help.profile'); })->name('profile');
+    });
+    
     // Additional routes for reordering
     Route::post('/categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
     Route::post('/news/reorder', [NewsController::class, 'reorder'])->name('news.reorder');

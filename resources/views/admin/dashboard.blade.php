@@ -4,6 +4,25 @@
 @section('page-title', 'Dashboard')
 
 @section('content')
+<!-- Quick Help Banner -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1">New to the IITM Display Portal?</h6>
+                    <p class="mb-1">Get started quickly with our comprehensive user guides covering all modules and features.</p>
+                </div>
+                <a href="{{ route('admin.help.index') }}" class="btn btn-info btn-sm me-2">
+                    <i class="fas fa-book me-2"></i>View Help Center
+                </a>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Statistics Cards -->
     <div class="col-xl-3 col-md-6 mb-4">
