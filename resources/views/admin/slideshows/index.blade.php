@@ -4,6 +4,27 @@
 @section('page-title', 'Slideshow Management')
 
 @section('content')
+
+<!-- Alert Container for both server-side and client-side alerts -->
+<div data-alert-container>
+    <!-- Success/Error Messages from Server -->
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show server-alert" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show server-alert" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+</div>
+
 <div class="row mb-3">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center">
@@ -112,14 +133,15 @@
                                        class="btn btn-sm btn-outline-warning" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form method="POST" action="{{ route('admin.slideshows.destroy', $slideshow) }}" 
-                                          class="d-inline" onsubmit="return confirm('Are you sure you want to delete this slideshow item?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            title="Delete" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal"
+                                            data-slideshow-id="{{ $slideshow->id }}"
+                                            data-slideshow-title="{{ $slideshow->title }}"
+                                            data-slideshow-filename="{{ $slideshow->filename }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -228,6 +250,85 @@
                 <button type="button" class="btn btn-primary" id="uploadBtn" style="display: none;">
                     <i class="fas fa-upload me-2"></i>Upload Files
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Slideshow Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone!
+                </div>
+                
+                <div class="slideshow-info mb-3">
+                    <h6>You are about to delete:</h6>
+                    <div class="d-flex align-items-center p-3 bg-light rounded">
+                        <div class="slideshow-preview me-3" id="deletePreview">
+                            <!-- Preview will be populated by JavaScript -->
+                        </div>
+                        <div>
+                            <strong id="deleteSlideshowTitle">Slideshow Title</strong><br>
+                            <small class="text-muted" id="deleteSlideshowFilename">filename.jpg</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="consequences mb-3">
+                    <h6>Consequences:</h6>
+                    <ul class="mb-0">
+                        <li>The slideshow item will be removed from all displays immediately</li>
+                        <li>The file will be permanently deleted from the server</li>
+                        <li>This action cannot be reversed</li>
+                        <li>Any running slideshows will continue without this item</li>
+                    </ul>
+                </div>
+                
+                <div class="password-section">
+                    <label for="deletePassword" class="form-label">
+                        <strong><i class="fas fa-lock me-2"></i>Enter your admin password to confirm:</strong>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-key"></i>
+                        </span>
+                        <input type="password" 
+                               class="form-control" 
+                               id="deletePassword" 
+                               placeholder="Your admin password" 
+                               required 
+                               autocomplete="current-password">
+                        <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+                            <i class="fas fa-eye" id="passwordIcon"></i>
+                        </button>
+                    </div>
+                    <div class="invalid-feedback" id="passwordError" style="display: none;">
+                        Password is required to confirm deletion.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="password" id="deletePasswordField">
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                        <i class="fas fa-trash me-2"></i>Yes, Delete Permanently
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -452,19 +553,150 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Delete Modal Functionality
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        const button = $(event.relatedTarget);
+        const slideshowId = button.data('slideshow-id');
+        const slideshowTitle = button.data('slideshow-title');
+        const slideshowFilename = button.data('slideshow-filename');
+        
+        // Update modal content
+        $('#deleteSlideshowTitle').text(slideshowTitle);
+        $('#deleteSlideshowFilename').text(slideshowFilename);
+        
+        // Set delete form action
+        const deleteForm = document.getElementById('deleteForm');
+        deleteForm.action = `/admin/slideshows/${slideshowId}`;
+        
+        // Find the slideshow row to get preview
+        const slideshowRow = $(`.slideshow-row[data-id="${slideshowId}"]`);
+        const previewCell = slideshowRow.find('td:nth-child(2)');
+        const previewContent = previewCell.html();
+        
+        // Update preview in modal
+        $('#deletePreview').html(previewContent);
+        
+        // Reset password field and button state
+        $('#deletePassword').val('');
+        $('#deletePasswordField').val('');
+        $('#confirmDeleteBtn').prop('disabled', true);
+        $('#passwordError').hide();
+        $('#deletePassword').removeClass('is-invalid');
+    });
+
+    // Password visibility toggle
+    $('#togglePassword').on('click', function() {
+        const passwordField = $('#deletePassword');
+        const passwordIcon = $('#passwordIcon');
+        
+        if (passwordField.attr('type') === 'password') {
+            passwordField.attr('type', 'text');
+            passwordIcon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            passwordField.attr('type', 'password');
+            passwordIcon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    // Password input validation
+    $('#deletePassword').on('input', function() {
+        const password = $(this).val().trim();
+        const deleteBtn = $('#confirmDeleteBtn');
+        const passwordField = $('#deletePasswordField');
+        const passwordError = $('#passwordError');
+        
+        if (password.length === 0) {
+            deleteBtn.prop('disabled', true);
+            $(this).removeClass('is-valid is-invalid');
+            passwordError.hide();
+        } else if (password.length < 6) {
+            deleteBtn.prop('disabled', true);
+            $(this).removeClass('is-valid').addClass('is-invalid');
+            passwordError.text('Password must be at least 6 characters long.').show();
+        } else {
+            deleteBtn.prop('disabled', false);
+            $(this).removeClass('is-invalid').addClass('is-valid');
+            passwordError.hide();
+        }
+        
+        passwordField.val(password);
+    });
+
+    // Clear modal state when hidden
+    $('#deleteModal').on('hidden.bs.modal', function() {
+        $('#deletePassword').val('');
+        $('#deletePasswordField').val('');
+        $('#confirmDeleteBtn').prop('disabled', true);
+        $('#passwordError').hide();
+        $('#deletePassword').removeClass('is-valid is-invalid');
+        $('#passwordIcon').removeClass('fa-eye-slash').addClass('fa-eye');
+        $('#deletePassword').attr('type', 'password');
+    });
+
+    // Handle delete form submission
+    $('#deleteForm').on('submit', function(e) {
+        const password = $('#deletePassword').val().trim();
+        
+        if (password.length === 0) {
+            e.preventDefault();
+            $('#deletePassword').addClass('is-invalid');
+            $('#passwordError').text('Password is required to confirm deletion.').show();
+            return false;
+        }
+        
+        // Show loading state
+        $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Deleting...');
+        
+        // Let the form submit normally - Laravel will handle the password validation
+        return true;
+    });
+
+    // Check for delete errors on page load (from server-side validation)
+    @if($errors->has('delete_error') || session('error'))
+        $(document).ready(function() {
+            // Show the modal again if there were validation errors
+            $('#deleteModal').modal('show');
+            
+            @if($errors->has('delete_error'))
+                $('#deletePassword').addClass('is-invalid');
+                $('#passwordError').text('{{ $errors->first('delete_error') }}').show();
+            @endif
+        });
+    @endif
 });
 
 function showAlert(type, message) {
+    // Check if there's already a server-side alert with the same message
+    const existingAlerts = $('.alert').filter(function() {
+        return $(this).text().trim().includes(message);
+    });
+    
+    if (existingAlerts.length > 0) {
+        // Don't show duplicate alert
+        return;
+    }
+    
     const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+        <div class="alert alert-${type} alert-dismissible fade show js-alert" role="alert">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    $('.container-fluid.py-4').prepend(alertHtml);
     
+    // Insert after any existing server-side alerts
+    const lastAlert = $('.alert').last();
+    if (lastAlert.length > 0) {
+        lastAlert.after(alertHtml);
+    } else {
+        // If no existing alerts, prepend to content section
+        $('[data-alert-container]').prepend(alertHtml);
+    }
+    
+    // Auto-dismiss only JavaScript-generated alerts
     setTimeout(() => {
-        $('.alert').alert('close');
+        $('.js-alert').alert('close');
     }, 3000);
 }
 </script>

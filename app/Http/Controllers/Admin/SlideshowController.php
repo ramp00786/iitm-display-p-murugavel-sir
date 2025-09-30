@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Slideshow;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 
 class SlideshowController extends Controller
 {
@@ -139,9 +140,31 @@ class SlideshowController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Slideshow $slideshow)
+    public function destroy(Request $request, Slideshow $slideshow)
     {
+        // Validate the password
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors([
+                'delete_error' => 'Password is required and must be at least 6 characters long.'
+            ])->with('error', 'Password validation failed.');
+        }
+
+        // Verify the password against the current authenticated user
+        $user = auth()->user();
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()->withErrors([
+                'delete_error' => 'Invalid password. Please enter your correct admin password.'
+            ])->with('error', 'Invalid password provided.');
+        }
+
         try {
+            // Store slideshow title for success message
+            $slideshowTitle = $slideshow->title;
+            
             // Delete file from storage
             if (Storage::disk('public')->exists($slideshow->path)) {
                 Storage::disk('public')->delete($slideshow->path);
@@ -151,10 +174,12 @@ class SlideshowController extends Controller
             $slideshow->delete();
 
             return redirect()->route('admin.slideshows.index')
-                ->with('success', 'Slideshow item deleted successfully.');
+                ->with('success', "Slideshow item '{$slideshowTitle}' deleted successfully.");
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete slideshow item: ' . $e->getMessage());
+            return back()->withErrors([
+                'delete_error' => 'Failed to delete slideshow item: ' . $e->getMessage()
+            ])->with('error', 'Failed to delete slideshow item: ' . $e->getMessage());
         }
     }
 

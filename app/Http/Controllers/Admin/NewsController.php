@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\News;
 use App\Models\Category;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 
 class NewsController extends Controller
 {
@@ -97,12 +98,42 @@ class NewsController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(News $news)
+    public function destroy(Request $request, News $news)
     {
-        $news->delete();
+        // Validate the password
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|min:6',
+        ]);
 
-        return redirect()->route('admin.news.index')
-            ->with('success', 'News item deleted successfully.');
+        if ($validator->fails()) {
+            return back()->withErrors([
+                'delete_error' => 'Password is required and must be at least 6 characters long.'
+            ])->with('error', 'Password validation failed.');
+        }
+
+        // Verify the password against the current authenticated user
+        $user = auth()->user();
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()->withErrors([
+                'delete_error' => 'Invalid password. Please enter your correct admin password.'
+            ])->with('error', 'Invalid password provided.');
+        }
+
+        try {
+            // Store news title for success message
+            $newsTitle = $news->title;
+            
+            // Delete the news item
+            $news->delete();
+
+            return redirect()->route('admin.news.index')
+                ->with('success', "News item '{$newsTitle}' deleted successfully.");
+
+        } catch (\Exception $e) {
+            return back()->withErrors([
+                'delete_error' => 'Failed to delete news item: ' . $e->getMessage()
+            ])->with('error', 'Failed to delete news item: ' . $e->getMessage());
+        }
     }
 
     /**

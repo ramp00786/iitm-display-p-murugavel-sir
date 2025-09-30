@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Category;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 
 class CategoryController extends Controller
 {
@@ -90,17 +91,49 @@ class CategoryController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Category $category)
+    public function destroy(Request $request, Category $category)
     {
-        // Check if category has news items
-        if ($category->news()->count() > 0) {
-            return back()->with('error', 'Cannot delete category that has news items.');
+        // Validate the password
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors([
+                'delete_error' => 'Password is required and must be at least 6 characters long.'
+            ])->with('error', 'Password validation failed.');
         }
 
-        $category->delete();
+        // Verify the password against the current authenticated user
+        $user = auth()->user();
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()->withErrors([
+                'delete_error' => 'Invalid password. Please enter your correct admin password.'
+            ])->with('error', 'Invalid password provided.');
+        }
 
-        return redirect()->route('admin.categories.index')
-            ->with('success', 'Category deleted successfully.');
+        // Check if category has news items
+        if ($category->news()->count() > 0) {
+            return back()->withErrors([
+                'delete_error' => 'Cannot delete category that has news items. Move or delete the news items first.'
+            ])->with('error', 'Cannot delete category that has news items.');
+        }
+
+        try {
+            // Store category name for success message
+            $categoryName = $category->name;
+            
+            // Delete the category
+            $category->delete();
+
+            return redirect()->route('admin.categories.index')
+                ->with('success', "Category '{$categoryName}' deleted successfully.");
+
+        } catch (\Exception $e) {
+            return back()->withErrors([
+                'delete_error' => 'Failed to delete category: ' . $e->getMessage()
+            ])->with('error', 'Failed to delete category: ' . $e->getMessage());
+        }
     }
 
     /**
