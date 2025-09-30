@@ -28,6 +28,11 @@ class IITMDisplaySystem {
         this.videoPlayer = null;
         this.plotContainer = null;
         this.plotCards = null;
+        this.mainWrapper = null;
+        this.loadingScreen = null;
+        
+        this.slideshowCompleted = false;
+        this.mainContentLoaded = false;
         
         this.init();
     }
@@ -51,16 +56,31 @@ class IITMDisplaySystem {
             // Fetch all data from API
             await this.fetchAllData();
             
-            // Initialize all components
-            this.initializeSlideshow();
-            this.initializeVideoPlayer();
-            this.initializeTickers();
-            this.initializeMeteorologicalCharts();
-            this.setupKeyboardControls();
+            // Check if we have slideshow content
+            const validSlideshows = this.data.slideshows?.filter(slideshow => 
+                slideshow.url && 
+                slideshow.url !== '/storage/' && 
+                slideshow.url !== 'null' && 
+                slideshow.url.trim() !== ''
+            ) || [];
+            
+            if (validSlideshows.length > 0) {
+                console.log('📷 Starting with slideshow presentation first...');
+                // Initialize slideshow first
+                this.initializeSlideshow();
+                this.setupKeyboardControls();
+            } else {
+                console.log('📷 No slideshow content - loading main content directly');
+                // No slideshow, load main content immediately
+                this.slideshowCompleted = true;
+                this.loadMainContent();
+            }
             
             console.log('✅ IITM Display System initialized successfully');
         } catch (error) {
             console.error('❌ Error initializing display system:', error);
+            // On error, still show main content
+            this.loadMainContent();
         }
     }
 
@@ -69,9 +89,17 @@ class IITMDisplaySystem {
         this.slideshowOverlay = document.getElementById('slideshowOverlay');
         this.videoPlayer = document.getElementById('videoPlayer');
         this.plotContainer = document.getElementById('plotContainer');
+        this.mainWrapper = document.querySelector('.wrapper');
+        this.loadingScreen = document.getElementById('loadingScreen');
         
         if (this.plotContainer) {
             this.plotCards = this.plotContainer.querySelectorAll('.card');
+        }
+        
+        // Initially hide main content
+        if (this.mainWrapper) {
+            this.mainWrapper.style.opacity = '0';
+            this.mainWrapper.style.visibility = 'hidden';
         }
     }
 
@@ -145,6 +173,8 @@ class IITMDisplaySystem {
             img.src = slide.url;
             img.onload = () => {
                 this.slideshowContainer.appendChild(img);
+                console.log(`📷 Image/GIF displayed for 5 seconds: ${slide.title}`);
+                // Display images and GIFs for exactly 5 seconds, then move to next
                 this.slideTimeout = setTimeout(() => this.nextSlide(), 5000);
             };
             img.onerror = () => {
@@ -156,12 +186,23 @@ class IITMDisplaySystem {
             video.src = slide.url;
             video.autoplay = true;
             video.muted = true;
-            video.loop = false;
-            video.onended = () => this.nextSlide();
+            video.loop = false; // Ensure no looping - play once only
+            video.playsInline = true; // Better mobile support
+            
+            video.onloadeddata = () => {
+                console.log(`📷 Video loaded and will play once: ${slide.title} (Duration: ${video.duration}s)`);
+            };
+            
+            video.onended = () => {
+                console.log(`📷 Video finished playing: ${slide.title}`);
+                this.nextSlide();
+            };
+            
             video.onerror = () => {
                 console.error('❌ Error loading video:', slide.url);
                 this.slideTimeout = setTimeout(() => this.nextSlide(), 1000);
             };
+            
             this.slideshowContainer.appendChild(video);
         }
     }
@@ -171,10 +212,15 @@ class IITMDisplaySystem {
         this.currentSlideIndex++;
 
         if (this.currentSlideIndex >= this.data.slideshows.length) {
-            console.log('📷 Slideshow finished, restarting from beginning');
-            // Reset to first slide and continue the slideshow loop
-            this.currentSlideIndex = 0;
-            this.slideTimeout = setTimeout(() => this.showSlide(0), 3000); // 3 second pause before restart
+            console.log('📷 Slideshow completed - all items displayed once. Loading main content...');
+            // Mark slideshow as completed and load main content
+            this.slideshowCompleted = true;
+            this.hideSlideshow();
+            
+            // Load main content after a brief delay
+            setTimeout(() => {
+                this.loadMainContent();
+            }, 1000);
         } else {
             this.showSlide(this.currentSlideIndex);
         }
@@ -747,8 +793,12 @@ class IITMDisplaySystem {
                     this.startSlideshow();
                     break;
                 case 'h':
-                    console.log('🔍 Hiding slideshow (H key pressed)');
+                    console.log('🔍 Hiding slideshow and loading main content (H key pressed)');
+                    this.slideshowCompleted = true;
                     this.hideSlideshow();
+                    setTimeout(() => {
+                        this.loadMainContent();
+                    }, 500);
                     break;
                 case 'p':
                     console.log('🔍 Pausing system (P key pressed)');
@@ -766,12 +816,24 @@ class IITMDisplaySystem {
     startSlideshow() {
         if (this.data.slideshows && this.data.slideshows.length > 0) {
             this.currentSlideIndex = 0;
+            this.slideshowCompleted = false;
+            
+            // Hide main content if showing slideshow
+            if (this.mainWrapper && this.mainContentLoaded) {
+                this.mainWrapper.style.opacity = '0';
+                this.mainWrapper.style.visibility = 'hidden';
+            }
+            
             if (this.slideshowOverlay) {
                 this.slideshowOverlay.classList.remove('slideshow-hidden');
             }
             this.showSlide(0);
         } else {
             console.log('📷 No slideshows available to display');
+            // If no slideshow, ensure main content is loaded
+            if (!this.mainContentLoaded) {
+                this.loadMainContent();
+            }
         }
     }
 
@@ -781,6 +843,69 @@ class IITMDisplaySystem {
             this.slideshowOverlay.classList.add('slideshow-hidden');
         }
         console.log('📷 Slideshow hidden');
+    }
+
+    async loadMainContent() {
+        if (this.mainContentLoaded) {
+            console.log('📱 Main content already loaded');
+            return;
+        }
+
+        console.log('📱 Loading main dashboard content with fade-in effect...');
+        
+        try {
+            // Initialize all main content components
+            await this.initializeVideoPlayer();
+            await this.initializeTickers();
+            await this.initializeMeteorologicalCharts();
+            
+            // Mark as loaded
+            this.mainContentLoaded = true;
+            
+            // Show main content with fade-in effect
+            this.showMainContentWithFade();
+            
+            console.log('✅ Main content loaded successfully with fade-in');
+            
+        } catch (error) {
+            console.error('❌ Error loading main content:', error);
+            // Still show the content even if there's an error
+            this.showMainContentWithFade();
+        }
+    }
+
+    showMainContentWithFade() {
+        if (!this.mainWrapper) return;
+        
+        // First hide the loading screen
+        if (this.loadingScreen) {
+            this.loadingScreen.classList.add('hidden');
+            console.log('📱 Loading screen hidden');
+        }
+        
+        // Small delay before showing main content
+        setTimeout(() => {
+            // Ensure the wrapper is visible but transparent
+            this.mainWrapper.style.visibility = 'visible';
+            this.mainWrapper.style.transition = 'opacity 2s ease-in-out';
+            
+            // Trigger fade-in after a small delay to ensure transition works
+            setTimeout(() => {
+                this.mainWrapper.style.opacity = '1';
+                console.log('📱 Main content fade-in started (2s duration)');
+            }, 100);
+            
+            // Log completion
+            setTimeout(() => {
+                console.log('📱 Main content fade-in completed');
+                // Remove loading screen from DOM after transition
+                if (this.loadingScreen) {
+                    setTimeout(() => {
+                        this.loadingScreen.style.display = 'none';
+                    }, 1000);
+                }
+            }, 2100);
+        }, 500);
     }
 }
 

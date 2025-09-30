@@ -53,6 +53,9 @@
             gap: 15px;
             padding: 15px;
             background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 2s ease-in-out;
         }
 
         .card1 { grid-area: header; }
@@ -338,6 +341,71 @@
         }
         .slideshow-hidden { display: none; }
 
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            z-index: 8888;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 1s ease-out;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-content {
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .loading-logo {
+            margin-bottom: 30px;
+        }
+
+        .loading-text h3 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--text-light) 0%, var(--secondary-orange) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .loading-text p {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            margin-bottom: 40px;
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 123, 37, 0.2);
+            border-top: 3px solid var(--primary-orange);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .admin-link {
             position: fixed;
             top: 10px;
@@ -360,11 +428,27 @@
 <body>
 
 <!-- Admin Link -->
-<a href="{{ route('login') }}" class="admin-link">Admin Panel</a>
+{{-- <a href="{{ route('login') }}" class="admin-link">Admin Panel</a> --}}
 
 <!-- Slideshow Overlay -->
 <div class="slideshow-overlay slideshow-hidden" id="slideshowOverlay">
   <div id="slideshowContainer"></div>
+</div>
+
+<!-- Loading Screen (shown while slideshow is running) -->
+<div class="loading-screen" id="loadingScreen">
+    <div class="loading-content">
+        <div class="loading-logo">
+            <img src="{{ asset('images/iitm_logo-preview.png') }}" alt="IITM Logo" style="height: 80px; filter: brightness(0) invert(1);">
+        </div>
+        <div class="loading-text">
+            <h3>IITM Display System</h3>
+            <p>Preparing meteorological dashboard...</p>
+        </div>
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+    </div>
 </div>
 
     <div class="wrapper">
